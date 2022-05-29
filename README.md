@@ -56,7 +56,7 @@ func main() {
 package main
 
 import (
-	"GoLogger"
+	"github.com/ExoNarcis/GoLogger"
 	"encoding/json"
 )
 
