@@ -1,6 +1,6 @@
 # GoLoggerService
 ## Go Local Logger and Net over TCP
-### before to use: get github.com/ExoNarcis/GoNetReader lib
+### before to use: get [this lib](https://github.com/ExoNarcis/GoNetReader)
 ### Example:
 #### Client:
 ```
