@@ -6,7 +6,7 @@
 ```
 package main
 import (
-  "github.com/ExoNarcis/GoLogger"
+  "github.com/ExoNarcis/GoLoggerService"
 )
 
 type NetPackage struct {
@@ -56,7 +56,7 @@ func main() {
 package main
 
 import (
-	"github.com/ExoNarcis/GoLogger"
+	"github.com/ExoNarcis/GoLoggerService"
 	"encoding/json"
 )
 
