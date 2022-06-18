@@ -27,15 +27,15 @@ type LoggerServiceServer struct {
 }
 
 func (log *LoggerServiceServer) netGeneRalWriter() { // NetLog Writer
-	fileS, errO := os.OpenFile(log.NetLogPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	fileS, err := os.OpenFile(log.NetLogPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	defer fileS.Close()
-	if errO != nil {
+	if err != nil {
 		return
 	}
 	for {
-		Message, err := <-log._generalLogChannel
-		if err {
-			if _, errW := fileS.WriteString("[" + time.Now().Local().String() + "] " + Message + "\n"); errW != nil {
+		Message, notclosed := <-log._generalLogChannel
+		if notclosed {
+			if _, err := fileS.WriteString("[" + time.Now().Local().String() + "] " + Message + "\n"); err != nil {
 				continue //?
 			}
 		} else {
@@ -49,15 +49,15 @@ func (log *LoggerServiceServer) NetLogWrite(mess string) { // Write to channel
 }
 
 func (log *LoggerServiceServer) writer() { // writer local
-	fileS, errO := os.OpenFile(log.LocalLogPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	fileS, err := os.OpenFile(log.LocalLogPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	defer fileS.Close()
-	if errO != nil {
+	if err != nil {
 		return
 	}
 	for {
-		Message, err := <-log._wLogchannel
-		if err {
-			if _, errW := fileS.WriteString("[" + time.Now().Local().String() + "] " + Message + "\n"); errW != nil {
+		Message, notclosed := <-log._wLogchannel
+		if notclosed {
+			if _, err := fileS.WriteString("[" + time.Now().Local().String() + "] " + Message + "\n"); err != nil {
 				continue //?
 			}
 			if strings.Contains(Message, log.CritMassage) {
@@ -86,16 +86,16 @@ func (log *LoggerServiceServer) Init() { // init func
 }
 
 func (log *LoggerServiceServer) serverMain() { // Main Serv
-	ListenS, ErrorList := net.Listen(log.NetServerProtocol, log.NetServerPort)
-	if ErrorList != nil {
-		go log.WriteLocalLogs("CRIT! Error start Listener, Configuration: protocol:" + log.NetServerProtocol + " localport:" + log.NetServerPort + " Error:" + ErrorList.Error())
+	ListenS, err := net.Listen(log.NetServerProtocol, log.NetServerPort)
+	if err != nil {
+		go log.WriteLocalLogs("CRIT! Error start Listener, Configuration: protocol:" + log.NetServerProtocol + " localport:" + log.NetServerPort + " Error:" + err.Error())
 		return
 	}
 	go log.WriteLocalLogs("\t\t\t STARTING SERVER \t\t\t\n Starting Listener: Protocol:" + log.NetServerProtocol + " Port:" + log.NetServerPort)
 	defer ListenS.Close()
 	for {
-		connection, errConnect := ListenS.Accept()
-		if errConnect != nil {
+		connection, err := ListenS.Accept()
+		if err != nil {
 			go log.WriteLocalLogs("Error Listener potocol:" + log.NetServerProtocol + " localport: " + log.NetServerPort)
 		}
 		go log.WriteLocalLogs("New Connection : " + connection.RemoteAddr().String())
@@ -105,17 +105,19 @@ func (log *LoggerServiceServer) serverMain() { // Main Serv
 func (log *LoggerServiceServer) connectionRouter(Connection net.Conn) { // Router
 	reader := GoNetReader.NewNetReader()
 	for {
-		Pack, ErrRead := reader.NetRead(Connection)
-		if ErrRead != nil {
-			go log.WriteLocalLogs("Package Error: " + Connection.RemoteAddr().String() + " ERROR: " + ErrRead.Error())
+		Pack, err := reader.NetRead(Connection)
+		Unpack := ""
+		if err != nil {
+			go log.WriteLocalLogs("Package Error: " + Connection.RemoteAddr().String() + " ERROR: " + err.Error())
 			Connection.Close()
 			return
 		}
-		UnJPack, errUnJ := log.UnPackFunction(Pack)
-		if errUnJ != nil {
-			go log.WriteLocalLogs("Error " + errUnJ.Error() + " to Deserialse Message: " + Pack + " Invalid")
+
+		Unpack, err = log.UnPackFunction(Pack)
+		if err != nil {
+			go log.WriteLocalLogs("Error " + err.Error() + " to Deserialse Message: " + Pack + " Invalid")
 		}
-		go log.NetLogWrite(UnJPack)
+		go log.NetLogWrite(Unpack)
 	}
 }
 

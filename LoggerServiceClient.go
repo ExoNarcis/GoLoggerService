@@ -52,17 +52,17 @@ func (log *LoggerServiceClient) geneRalLogConnector(Connection net.Conn) { // Se
 	Connection.SetDeadline(time.Time{})
 	log._netLogService.Done()
 	for {
-		Message, err := <-log._generalLogChannel
-		if err {
-			pack, errJ := log.PackFunction(Message)
-			if errJ != nil {
-				go log.WriteLocalLogs("Package convert error " + errJ.Error())
+		Message, notclosed := <-log._generalLogChannel
+		if notclosed {
+			pack, err := log.PackFunction(Message)
+			if err != nil {
+				go log.WriteLocalLogs("Package convert error " + err.Error())
 				continue
 			}
-			_, connecterr := Connection.Write(GoNetReader.GetPackage(pack))
-			if connecterr != nil {
+			_, err = Connection.Write(GoNetReader.GetPackage(pack))
+			if err != nil {
 				close(log._generalLogChannel)
-				log.WriteLocalLogs("Log Server Disconnect " + connecterr.Error())
+				log.WriteLocalLogs("Log Server Disconnect " + err.Error())
 				log._netError = true
 				//log.WriteLocalLogs("Retry 10 sec")
 				//time.Sleep(10 * time.Second)
@@ -80,16 +80,16 @@ func (log *LoggerServiceClient) geneRalLogConnector(Connection net.Conn) { // Se
 }
 
 func (log *LoggerServiceClient) writer() { // local writer
-	fileS, errO := os.OpenFile(log.LocalLogPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	fileS, err := os.OpenFile(log.LocalLogPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	defer fileS.Close()
-	if errO != nil {
+	if err != nil {
 		log._loggersService.Done()
 		return
 	}
 	for {
-		Message, err := <-log._wLogchannel
-		if err {
-			if _, errW := fileS.WriteString("[" + time.Now().Local().String() + "] " + Message + "\n"); errW != nil {
+		Message, notclosed := <-log._wLogchannel
+		if notclosed {
+			if _, err := fileS.WriteString("[" + time.Now().Local().String() + "] " + Message + "\n"); err != nil {
 				continue //?
 			}
 			if strings.Contains(Message, log.CritMassage) {
