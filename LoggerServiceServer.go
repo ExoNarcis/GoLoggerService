@@ -109,13 +109,13 @@ func (log *LoggerServiceServer) connectionRouter(Connection net.Conn) { // Route
 	for {
 		Pack, err := reader.NetRead(Connection)
 		Unpack := ""
-		if err == io.EOF {
-			go log.WriteLocalLogs("Connection " + Connection.RemoteAddr().String() + " Closed")
-			return
-		}
 		if err != nil {
+			if err == io.EOF {
+				go log.WriteLocalLogs("Connection " + Connection.RemoteAddr().String() + " Closed")
+				return
+			}
 			go log.WriteLocalLogs("Package Error: " + Connection.RemoteAddr().String() + " ERROR: " + err.Error())
-			return
+			continue
 		}
 		Unpack, err = log.UnPackFunction(Pack)
 		if err != nil {
