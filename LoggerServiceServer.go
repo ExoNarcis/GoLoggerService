@@ -1,6 +1,7 @@
 package GoLogger
 
 import (
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -103,16 +104,19 @@ func (log *LoggerServiceServer) serverMain() { // Main Serv
 	}
 }
 func (log *LoggerServiceServer) connectionRouter(Connection net.Conn) { // Router
+	defer Connection.Close()
 	reader := GoNetReader.NewNetReader()
 	for {
 		Pack, err := reader.NetRead(Connection)
 		Unpack := ""
-		if err != nil {
-			go log.WriteLocalLogs("Package Error: " + Connection.RemoteAddr().String() + " ERROR: " + err.Error())
-			Connection.Close()
+		if err == io.EOF {
+			go log.WriteLocalLogs("Connection " + Connection.RemoteAddr().String() + " Closed")
 			return
 		}
-
+		if err != nil {
+			go log.WriteLocalLogs("Package Error: " + Connection.RemoteAddr().String() + " ERROR: " + err.Error())
+			return
+		}
 		Unpack, err = log.UnPackFunction(Pack)
 		if err != nil {
 			go log.WriteLocalLogs("Error " + err.Error() + " to Deserialse Message: " + Pack + " Invalid")
