@@ -29,6 +29,23 @@ type LoggerServiceClient struct {
 	_netError          bool
 }
 
+func (log *LoggerServiceClient) Disconnect() {
+	if !log._netError {
+		log._netError = true
+		log.WriteLogs("Disconnect on demand")
+		close(log._generalLogChannel)
+	}
+}
+
+func (log *LoggerServiceClient) CloseLocalLog() {
+	log.WriteLogs("Closed on demand")
+	close(log._wLogchannel)
+}
+func (log *LoggerServiceClient) Exit() {
+	log.Disconnect()
+	log.CloseLocalLog()
+}
+
 func (log *LoggerServiceClient) logConnectionServer() error { // connect to log server
 	conn, err := net.Dial("tcp", log.NetServerIP+":"+log.NetServerPort)
 	if err != nil {
@@ -100,8 +117,10 @@ func (log *LoggerServiceClient) writer() { // local writer
 			}
 		} else {
 			log._loggersService.Done()
-			close(log._wLogchannel)
-			close(log._generalLogChannel)
+			_, notclosed = <-log._generalLogChannel
+			if !notclosed {
+				close(log._generalLogChannel)
+			}
 			return
 		}
 	}
